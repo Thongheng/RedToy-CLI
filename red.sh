@@ -471,7 +471,7 @@ module_infra() {
                 execute_cmd "$CLIPBOARD" "sshpass" "-p" "$PASSWORD" "ssh" "$USERNAME@$TARGET"
                 ;;
             ewinrm)
-                local cmd=("evil-winrm" "-i" "$TARGET")
+                local cmd=("evil-winrm-py" "-i" "$TARGET")
                 [ -n "$USERNAME" ] && cmd+=("-u" "$USERNAME")
                 [ -n "$PASSWORD" ] && cmd+=("-p" "$PASSWORD")
                 [ -n "$HASH" ] && cmd+=("-H" "$HASH")
@@ -805,7 +805,7 @@ module_web() {
             $OUTPUT_ENABLED && cmd+=("-o" "ffuf_dir_output.txt")
             ;;
         "ferox")
-            cmd=("feroxbuster" "-u" "$URL" "-w" "$WORDLIST_DIR")
+            cmd=("feroxbuster" "-u" "$URL")
             $OUTPUT_ENABLED && cmd+=("-o" "ferox_output.txt")
             ;;
         "nuclei")
