@@ -9,7 +9,7 @@ class FileModule(BaseModule):
     def __init__(self, session):
         self.session = session
 
-    def run_download(self, filename, tool="wget", write=False, copy_only=False, edit=False):
+    def run_download(self, filename, tool="wget", write=False, copy_only=False, edit=False, preview=False):
         if not filename:
             log_error("Filename is required.")
             return
@@ -36,21 +36,21 @@ class FileModule(BaseModule):
         elif tool == "scp":
             cmd = f"scp user@{ip_addr}:$(pwd)/{filename} ."
         
-        if copy_only or edit:
-            self._exec(cmd, copy_only, edit, run=False)
+        if copy_only or edit or preview:
+            self._exec(cmd, copy_only, edit, run=False, preview=preview)
         else:
             log_success(f"Download Command ({tool}):")
-            self._exec(cmd, copy_only=False, edit=False, run=False)
+            self._exec(cmd, copy_only=False, edit=False, run=False, preview=preview)
 
-    def run_base64(self, filename, copy_only=False, edit=False):
+    def run_base64(self, filename, copy_only=False, edit=False, preview=False):
         if os.path.isfile(filename):
             log_success(f"Base64 encoded content of {filename}:")
             cmd = f"base64 {filename}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
         else:
             log_error(f"File {filename} not found locally.")
 
-    def run_server(self, server_type="http"):
+    def run_server(self, server_type="http", preview=False):
         interface = self.session.get("INTERFACE")
         ip_addr = get_ip_address(interface)
         
@@ -58,18 +58,23 @@ class FileModule(BaseModule):
             log_error(f"Could not find IP for interface {interface}")
             return
 
+        cmd = []
         if server_type == "http":
-            log_info(f"Starting HTTP server on {interface} ({ip_addr}:8000)...")
-            try:
-                subprocess.run(["python3", "-m", "http.server", "8000"])
-            except KeyboardInterrupt:
-                print("\nServer stopped.")
+            cmd = ["python3", "-m", "http.server", "8000"]
+            msg = f"Starting HTTP server on {interface} ({ip_addr}:8000)..."
         elif server_type == "smb":
-            log_info(f"Starting SMB server on {interface}...")
-            try:
-                subprocess.run(["sudo", "impacket-smbserver", "share", ".", "-smb2support"])
-            except KeyboardInterrupt:
-                print("\nServer stopped.")
+            cmd = ["sudo", "impacket-smbserver", "share", ".", "-smb2support"]
+            msg = f"Starting SMB server on {interface}..."
+        
+        if preview:
+            print(f"{Colors.OKCYAN}{' '.join(cmd)}{Colors.ENDC}")
+            return
+
+        log_info(msg)
+        try:
+            subprocess.run(cmd)
+        except KeyboardInterrupt:
+            print("\nServer stopped.")
 
     def run(self, args_list):
         parser = ArgumentParserNoExit(prog="file", description="File Transfer & Server Tools")
@@ -119,24 +124,25 @@ class FileShell(BaseShell):
 
     def do_download(self, arg):
         """Generate download command: download <filename> [tool]"""
-        arg, copy_only, edit = self.parse_common_options(arg)
+        arg, copy_only, edit, preview = self.parse_common_options(arg)
         parts = arg.split()
         if not parts:
             log_error("Usage: download <filename> [tool]")
             return
         filename = parts[0]
         tool = parts[1] if len(parts) > 1 else "wget"
-        self.file_module.run_download(filename, tool, write=False, copy_only=copy_only, edit=edit)
+        self.file_module.run_download(filename, tool, write=False, copy_only=copy_only, edit=edit, preview=preview)
 
     def do_base64(self, arg):
         """Base64 encode a file: base64 <filename>"""
-        arg, copy_only, edit = self.parse_common_options(arg)
+        arg, copy_only, edit, preview = self.parse_common_options(arg)
         if not arg:
             log_error("Usage: base64 <filename>")
             return
-        self.file_module.run_base64(arg, copy_only, edit)
+        self.file_module.run_base64(arg, copy_only, edit, preview)
 
     def do_server(self, arg):
         """Start a server: server [http|smb]"""
+        arg, copy_only, edit, preview = self.parse_common_options(arg)
         server_type = arg.strip() or "http"
-        self.file_module.run_server(server_type)
+        self.file_module.run_server(server_type, preview=preview)

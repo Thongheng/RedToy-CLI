@@ -9,19 +9,19 @@ class InfraModule(BaseModule):
     def __init__(self, session):
         super().__init__(session)
 
-    def run_nmap(self, copy_only=False, edit=False):
+    def run_nmap(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             cmd = f"nmap -sV -sC -Pn -v {target}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_rustscan(self, copy_only=False, edit=False):
+    def run_rustscan(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             cmd = f"rustscan -a {target} --ulimit 5000"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_smbclient(self, copy_only=False, edit=False):
+    def run_smbclient(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             user = self.session.get("USERNAME")
@@ -30,9 +30,9 @@ class InfraModule(BaseModule):
                 cmd = f"smbclient -L //{target}/ -U '{user}%{password}'"
             else:
                 cmd = f"smbclient -L //{target}/ -N"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_smbmap(self, copy_only=False, edit=False):
+    def run_smbmap(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             user = self.session.get("USERNAME")
@@ -41,29 +41,29 @@ class InfraModule(BaseModule):
                 cmd = f"smbmap -H {target} -u '{user}' -p '{password}'"
             else:
                 cmd = f"smbmap -H {target} -u null -p null"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_enum4linux(self, copy_only=False, edit=False):
+    def run_enum4linux(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             user = self.session.get("USERNAME")
             password = self.session.get("PASSWORD")
             auth = f"-u '{user}' -p '{password}'" if user and password else ""
             cmd = f"enum4linux-ng -A {auth} {target}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_netexec(self, copy_only=False, edit=False):
+    def run_netexec(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             user = self.session.get("USERNAME")
             password = self.session.get("PASSWORD")
             if user and password:
                 cmd = f"nxc smb {target} -u '{user}' -p '{password}'"
-                self._exec(cmd, copy_only, edit)
+                self._exec(cmd, copy_only, edit, preview=preview)
             else:
                 log_warn("NetExec requires USERNAME and PASSWORD.")
 
-    def run_bloodhound(self, copy_only=False, edit=False):
+    def run_bloodhound(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             user = self.session.get("USERNAME")
@@ -71,47 +71,47 @@ class InfraModule(BaseModule):
             domain = self.session.get("DOMAIN")
             if user and password and domain:
                 cmd = f"bloodhound-ce-python -u '{user}' -p '{password}' -ns {target} -d {domain} -c all"
-                self._exec(cmd, copy_only, edit)
+                self._exec(cmd, copy_only, edit, preview=preview)
             else:
                 log_warn("BloodHound requires USERNAME, PASSWORD, and DOMAIN.")
 
-    def run_ftp(self, copy_only=False, edit=False):
+    def run_ftp(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             user = self.session.get("USERNAME") or "anonymous"
             password = self.session.get("PASSWORD") or "anonymous"
             cmd = f"lftp -u '{user},{password}' ftp://{target}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_msf(self, copy_only=False, edit=False):
+    def run_msf(self, copy_only=False, edit=False, preview=False):
         lhost = get_ip_address(self.session.get("INTERFACE")) or "0.0.0.0"
         lport = self.session.get("LPORT")
         payload = "windows/meterpreter/reverse_tcp"
         msf_cmd = f"use exploit/multi/handler; set payload {payload}; set LHOST {lhost}; set LPORT {lport}; run"
         cmd = f"msfconsole -q -x \"{msf_cmd}\""
-        self._exec(cmd, copy_only, edit)
+        self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_rdp(self, copy_only=False, edit=False):
+    def run_rdp(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             user = self.session.get("USERNAME")
             password = self.session.get("PASSWORD")
             auth = f"/u:'{user}' /p:'{password}'" if user and password else ""
             cmd = f"xfreerdp3 /v:{target} +clipboard /dynamic-resolution /drive:share,. {auth}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_ssh(self, copy_only=False, edit=False):
+    def run_ssh(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             user = self.session.get("USERNAME")
             password = self.session.get("PASSWORD")
             if user and password:
                 cmd = f"sshpass -p '{password}' ssh {user}@{target}"
-                self._exec(cmd, copy_only, edit)
+                self._exec(cmd, copy_only, edit, preview=preview)
             else:
                 log_warn("SSH requires USERNAME and PASSWORD (for sshpass).")
 
-    def run_evil_winrm(self, copy_only=False, edit=False):
+    def run_evil_winrm(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             user = self.session.get("USERNAME")
@@ -122,9 +122,9 @@ class InfraModule(BaseModule):
             if password: auth += f"-p '{password}' "
             if hsh: auth += f"-H '{hsh}' "
             cmd = f"evil-winrm-py -i {target} {auth}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_impacket(self, tool, copy_only=False, edit=False):
+    def run_impacket(self, tool, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             user = self.session.get("USERNAME")
@@ -140,15 +140,15 @@ class InfraModule(BaseModule):
             
             cmd = f"impacket-{tool} {creds}@{target}"
             if hsh: cmd += f" -hashes {hsh}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_kerbrute(self, copy_only=False, edit=False):
+    def run_kerbrute(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
             domain = self.session.get("DOMAIN")
             if domain:
                 cmd = f"kerbrute userenum --dc {target} -d {domain} users.txt"
-                self._exec(cmd, copy_only, edit)
+                self._exec(cmd, copy_only, edit, preview=preview)
             else:
                 log_warn("Kerbrute requires DOMAIN.")
 
@@ -232,81 +232,81 @@ class InfraShell(BaseShell):
 
     def do_nmap(self, arg):
         """Run Nmap scan"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_nmap(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_nmap(copy_only, edit, preview)
 
     def do_rustscan(self, arg):
         """Run Rustscan"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_rustscan(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_rustscan(copy_only, edit, preview)
 
     def do_smbclient(self, arg):
         """Run smbclient"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_smbclient(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_smbclient(copy_only, edit, preview)
 
     def do_smbmap(self, arg):
         """Run smbmap"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_smbmap(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_smbmap(copy_only, edit, preview)
 
     def do_enum4linux(self, arg):
         """Run enum4linux-ng"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_enum4linux(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_enum4linux(copy_only, edit, preview)
 
     def do_netexec(self, arg):
         """Run NetExec SMB"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_netexec(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_netexec(copy_only, edit, preview)
 
     def do_bloodhound(self, arg):
         """Run BloodHound-CE"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_bloodhound(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_bloodhound(copy_only, edit, preview)
 
     def do_ftp(self, arg):
         """Run FTP enum"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_ftp(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_ftp(copy_only, edit, preview)
     
     def do_msf(self, arg):
         """Start msfconsole handler"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_msf(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_msf(copy_only, edit, preview)
 
     def do_rdp(self, arg):
         """Run RDP (xfreerdp)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_rdp(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_rdp(copy_only, edit, preview)
 
     def do_ssh(self, arg):
         """Run SSH (sshpass)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_ssh(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_ssh(copy_only, edit, preview)
 
     def do_evil_winrm(self, arg):
         """Run Evil-WinRM"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_evil_winrm(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_evil_winrm(copy_only, edit, preview)
 
     def do_psexec(self, arg):
         """Run Impacket PsExec"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_impacket("psexec", copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_impacket("psexec", copy_only, edit, preview)
 
     def do_wmiexec(self, arg):
         """Run Impacket WMIexec"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_impacket("wmiexec", copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_impacket("wmiexec", copy_only, edit, preview)
 
     def do_secretsdump(self, arg):
         """Run Impacket SecretsDump"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_impacket("secretsdump", copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_impacket("secretsdump", copy_only, edit, preview)
 
     def do_kerbrute(self, arg):
         """Run Kerbrute User Enum"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.infra_module.run_kerbrute(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.infra_module.run_kerbrute(copy_only, edit, preview)
 

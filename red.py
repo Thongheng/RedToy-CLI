@@ -11,7 +11,7 @@ if str(project_dir) not in sys.path:
 import argparse
 from redsploit.core.session import Session
 from redsploit.core.shell import RedShell
-from redsploit.core.colors import Colors
+from redsploit.core.colors import Colors, log_error
 from redsploit.modules.infra import InfraModule
 from redsploit.modules.web import WebModule
 from redsploit.modules.file import FileModule
@@ -63,7 +63,12 @@ def main():
             if i + 2 < len(unknown):
                 key = unknown[i+1]
                 val = unknown[i+2]
-                session.set(key, val)
+
+                if key.startswith("-"):
+                    log_error(f"Invalid variable name '{key}'. Variable names cannot start with '-'.")
+                else:
+                    session.set(key, val)
+
                 i += 3
                 continue
             else:

@@ -46,102 +46,102 @@ class WebModule(BaseModule):
 
 
 
-    def run_subfinder(self, copy_only=False, edit=False):
+    def run_subfinder(self, copy_only=False, edit=False, preview=False):
         domain, _, _ = self._get_target()
         if domain:
             cmd = f"subfinder -d {domain}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_gobuster_dns(self, copy_only=False, edit=False):
+    def run_gobuster_dns(self, copy_only=False, edit=False, preview=False):
         domain, _, _ = self._get_target()
         if domain:
             cmd = f"gobuster dns -d {domain} -w {WORDLIST_SUBDOMAIN}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_dnsrecon(self, copy_only=False, edit=False):
+    def run_dnsrecon(self, copy_only=False, edit=False, preview=False):
         domain, _, _ = self._get_target()
         if domain:
             cmd = f"dnsrecon -d {domain} -t brf -w {WORDLIST_SUBDOMAIN} -f -n 8.8.8.8"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_httpx(self, copy_only=False, edit=False):
+    def run_httpx(self, copy_only=False, edit=False, preview=False):
         _, url, port = self._get_target()
         if url:
             cmd = f"httpx -u {url}"
             if port: cmd += f" -p {port}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_ffuf_dir(self, copy_only=False, edit=False):
+    def run_ffuf_dir(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
             cmd = f"ffuf -u {url}/FUZZ -w {WORDLIST_DIR} -ic"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_ffuf_vhost(self, copy_only=False, edit=False):
+    def run_ffuf_vhost(self, copy_only=False, edit=False, preview=False):
         domain, url, _ = self._get_target()
         if domain and url:
             cmd = f"ffuf -u {url} -H 'Host:FUZZ.{domain}' -w {WORDLIST_VHOST} -ic"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_gobuster_dir(self, copy_only=False, edit=False):
+    def run_gobuster_dir(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
             cmd = f"gobuster dir -u {url} -w {WORDLIST_DIR}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_feroxbuster(self, copy_only=False, edit=False):
+    def run_feroxbuster(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
             cmd = f"feroxbuster -u {url}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_nuclei(self, copy_only=False, edit=False):
+    def run_nuclei(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
             cmd = f"nuclei -u {url}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_wpscan(self, copy_only=False, edit=False):
+    def run_wpscan(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
             cmd = f"wpscan --url {url} --enumerate p,t,u"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_arjun(self, copy_only=False, edit=False):
+    def run_arjun(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
             cmd = f"arjun -u {url}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_subzy(self, copy_only=False, edit=False):
+    def run_subzy(self, copy_only=False, edit=False, preview=False):
         domain, _, _ = self._get_target()
         if domain:
             cmd = f"subzy run --targets {domain}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_katana(self, copy_only=False, edit=False):
+    def run_katana(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
             cmd = f"katana -u {url}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_waf(self, copy_only=False, edit=False):
+    def run_waf(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
             cmd = f"wafw00f {url}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_screenshots(self, copy_only=False, edit=False):
+    def run_screenshots(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
             cmd = f"gowitness scan --single {url}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
-    def run_tech(self, copy_only=False, edit=False):
+    def run_tech(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
             cmd = f"whatweb {url}"
-            self._exec(cmd, copy_only, edit)
+            self._exec(cmd, copy_only, edit, preview=preview)
 
 
 
@@ -219,76 +219,76 @@ class WebShell(BaseShell):
 
     def do_subfinder(self, arg):
         """Run subfinder (Passive Subdomain)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_subfinder(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_subfinder(copy_only, edit, preview)
 
     def do_gobuster_dns(self, arg):
         """Run gobuster dns (Active Subdomain)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_gobuster_dns(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_gobuster_dns(copy_only, edit, preview)
 
     def do_dns(self, arg):
         """Run dnsrecon (DNS Enumeration)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_dnsrecon(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_dnsrecon(copy_only, edit, preview)
 
     def do_httpx(self, arg):
         """Run httpx (Web Server Validation)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_httpx(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_httpx(copy_only, edit, preview)
 
     def do_dir(self, arg):
         """Run ffuf (Directory Bruteforce)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_ffuf_dir(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_ffuf_dir(copy_only, edit, preview)
 
     def do_vhost(self, arg):
         """Run ffuf (VHost Discovery)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_ffuf_vhost(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_ffuf_vhost(copy_only, edit, preview)
 
     def do_ferox(self, arg):
         """Run feroxbuster (Dir Scan)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_feroxbuster(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_feroxbuster(copy_only, edit, preview)
 
     def do_nuclei(self, arg):
         """Run nuclei (Vuln Scan)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_nuclei(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_nuclei(copy_only, edit, preview)
 
     def do_wpscan(self, arg):
         """Run wpscan (WordPress Scan)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_wpscan(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_wpscan(copy_only, edit, preview)
 
     def do_arjun(self, arg):
         """Run arjun (Parameter Discovery)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_arjun(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_arjun(copy_only, edit, preview)
 
     def do_subzy(self, arg):
         """Run subzy (Subdomain Takeover)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_subzy(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_subzy(copy_only, edit, preview)
 
     def do_katana(self, arg):
         """Run katana (Crawling)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_katana(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_katana(copy_only, edit, preview)
 
     def do_waf(self, arg):
         """Run wafw00f (WAF Detection)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_waf(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_waf(copy_only, edit, preview)
 
     def do_screenshots(self, arg):
         """Run gowitness (Screenshots)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_screenshots(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_screenshots(copy_only, edit, preview)
 
     def do_tech(self, arg):
         """Run whatweb (Tech Detection)"""
-        _, copy_only, edit = self.parse_common_options(arg)
-        self.web_module.run_tech(copy_only, edit)
+        _, copy_only, edit, preview = self.parse_common_options(arg)
+        self.web_module.run_tech(copy_only, edit, preview)
 

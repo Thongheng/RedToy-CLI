@@ -33,7 +33,13 @@ class BaseShell(cmd.Cmd):
             edit = True
             args.remove("-e")
             
-        return " ".join(args), copy_only, edit
+        if "-p" in args:
+            preview = True
+            args.remove("-p")
+        else:
+            preview = False
+            
+        return " ".join(args), copy_only, edit, preview
 
     def do_back(self, arg):
         """Return to the main menu"""
@@ -107,6 +113,15 @@ class BaseShell(cmd.Cmd):
             # If argument provided, use default help for that command
             super().do_help(arg)
             return
+
+        print(f"\n{Colors.HEADER}Global Flags{Colors.ENDC}")
+        print("=" * 80)
+        print(f"{'Flag':<10} {'Description'}")
+        print("-" * 80)
+        print(f"{'-c':<10} Copy command to clipboard without running")
+        print(f"{'-p':<10} Preview command without running")
+        print(f"{'-e':<10} Edit command before running")
+
 
 
         
