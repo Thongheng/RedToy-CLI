@@ -2,7 +2,7 @@ import os
 import shlex
 from ..core.colors import log_info, log_warn, log_error
 from ..core.base_shell import BaseShell
-from .base import ArgumentParserNoExit, BaseModule
+from .base import ArgumentParserNoExit, BaseModule, HelpExit
 from ..core.utils import get_ip_address
 
 class InfraModule(BaseModule):
@@ -179,6 +179,8 @@ class InfraModule(BaseModule):
             args = parser.parse_args(args_list)
         except ValueError as e:
             log_error(str(e))
+            return
+        except HelpExit:
             return
 
         if args.target:

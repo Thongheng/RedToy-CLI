@@ -1,5 +1,6 @@
 import subprocess
 import os
+from .colors import log_error
 
 def get_ip_address(iface):
     try:
@@ -8,8 +9,10 @@ def get_ip_address(iface):
         for line in result.split('\n'):
             if "inet" in line:
                 return line.strip().split()[1].split('/')[0]
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         pass
+    except Exception as e:
+        log_error(f"Error getting IP (ip command): {e}")
     
     try:
         # Try using 'ifconfig'
@@ -18,7 +21,9 @@ def get_ip_address(iface):
         match = re.search(r'inet (?:addr:)?([\d.]+)', result)
         if match:
             return match.group(1)
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         pass
+    except Exception as e:
+        log_error(f"Error getting IP (ifconfig): {e}")
     
     return None

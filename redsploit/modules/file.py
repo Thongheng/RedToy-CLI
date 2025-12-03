@@ -2,7 +2,7 @@ import os
 import subprocess
 from ..core.colors import log_info, log_success, log_error
 from ..core.base_shell import BaseShell
-from .base import ArgumentParserNoExit, BaseModule
+from .base import ArgumentParserNoExit, BaseModule, HelpExit
 from ..core.utils import get_ip_address
 
 class FileModule(BaseModule):
@@ -82,12 +82,14 @@ class FileModule(BaseModule):
         parser.add_argument("-w", "--write", action="store_true", help="Add output flag (-O/-o)")
         parser.add_argument("-t", "--tool", default="wget", choices=["wget", "curl", "iwr", "certutil", "scp", "base64"], help="Transfer tool")
         parser.add_argument("-s", "--server", choices=["http", "smb"], help="Server type (http/smb)")
-        parser.add_argument("-b64", action="store_true", help="Base64 encode file (shortcut for -t base64)")
+        parser.add_argument("-b64", action="store_true", help="Base64 encode file (alias for -t base64)")
         
         try:
             args = parser.parse_args(args_list)
         except ValueError as e:
             log_error(str(e))
+            return
+        except HelpExit:
             return
 
         if args.b64: args.tool = "base64"

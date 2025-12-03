@@ -1,7 +1,7 @@
 import os
 from ..core.colors import log_info, log_error
 from ..core.base_shell import BaseShell
-from .base import ArgumentParserNoExit, BaseModule
+from .base import ArgumentParserNoExit, BaseModule, HelpExit
 
 # --- GLOBAL CONFIGURATION ---
 DEFAULT_SECLISTS_DIR = os.environ.get("SECLISTS_DIR", "/usr/share/seclists")
@@ -37,7 +37,7 @@ class WebModule(BaseModule):
         # Remove trailing slash
         domain = domain.rstrip("/")
         
-        # Construct URL
+        # Reconstruct URL
         url = f"{protocol}://{domain}"
         if port:
             url += f":{port}"
@@ -65,16 +65,15 @@ class WebModule(BaseModule):
             self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_httpx(self, copy_only=False, edit=False, preview=False):
-        _, url, port = self._get_target()
-        if url:
-            cmd = f"httpx -u {url}"
-            if port: cmd += f" -p {port}"
+        domain, _, _ = self._get_target()
+        if domain:
+            cmd = f"echo {domain} | httpx -silent -title -tech-detect -status-code"
             self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_ffuf_dir(self, copy_only=False, edit=False, preview=False):
         _, url, _ = self._get_target()
         if url:
-            cmd = f"ffuf -u {url}/FUZZ -w {WORDLIST_DIR} -ic"
+            cmd = f"ffuf -u {url}/FUZZ -w {WORDLIST_DIR} -mc 200,301,302,403"
             self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_ffuf_vhost(self, copy_only=False, edit=False, preview=False):
@@ -116,7 +115,7 @@ class WebModule(BaseModule):
     def run_subzy(self, copy_only=False, edit=False, preview=False):
         domain, _, _ = self._get_target()
         if domain:
-            cmd = f"subzy run --targets {domain}"
+            cmd = f"subzy run --target {domain}"
             self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_katana(self, copy_only=False, edit=False, preview=False):
@@ -153,10 +152,12 @@ class WebModule(BaseModule):
         parser.add_argument("-gobuster-dns", action="store_true", help="Active Subdomain")
         parser.add_argument("-httpx", action="store_true", help="Web Server Validation")
         parser.add_argument("-dir", action="store_true", help="Dir Bruteforce")
-        parser.add_argument("-ferox", action="store_true", help="Feroxbuster Dir Scan")
+        parser.add_argument("-vhost", action="store_true", help="VHost Discovery")
+        parser.add_argument("-ferox", action="store_true", help="Dir Scan (Ferox)")
         parser.add_argument("-nuclei", action="store_true", help="Vuln Scan")
         parser.add_argument("-wpscan", action="store_true", help="WordPress Scan")
-        parser.add_argument("-arjun", action="store_true", help="Parameter Discovery")
+        parser.add_argument("-arjun", action="store_true", help="Param Discovery")
+        parser.add_argument("-dns", action="store_true", help="DNS Enum")
         parser.add_argument("-subzy", action="store_true", help="Subdomain Takeover")
         parser.add_argument("-katana", action="store_true", help="Crawling")
         parser.add_argument("-waf", action="store_true", help="WAF Detection")
@@ -169,6 +170,8 @@ class WebModule(BaseModule):
             args = parser.parse_args(args_list)
         except ValueError as e:
             log_error(str(e))
+            return
+        except HelpExit:
             return
 
         if args.target:

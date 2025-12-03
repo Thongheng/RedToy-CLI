@@ -6,6 +6,9 @@ import readline
 from typing import Optional
 from ..core.colors import log_info, log_success, log_warn, Colors
 
+class HelpExit(Exception):
+    pass
+
 class ArgumentParserNoExit(argparse.ArgumentParser):
     def error(self, message: str) -> None:
         raise ValueError(message)
@@ -13,6 +16,8 @@ class ArgumentParserNoExit(argparse.ArgumentParser):
     def exit(self, status: int = 0, message: Optional[str] = None) -> None:
         if message:
             print(message)
+        if status == 0:
+            raise HelpExit()
         # Do not exit
         return
 
@@ -45,7 +50,10 @@ class BaseModule:
             self._copy_to_clipboard(cmd)
         elif run:
             log_info(f"Running: {cmd}")
-            os.system(cmd)
+            try:
+                subprocess.run(cmd, shell=True, check=False)
+            except Exception as e:
+                log_error(f"Execution failed: {e}")
         else:
             # If not running and not copy-only (and maybe edited), just print/copy
             print(cmd)
@@ -69,7 +77,11 @@ class BaseModule:
             return None
         except Exception as e:
             # Fallback if set_pre_input_hook is not available (e.g. some platforms)
-            readline.set_pre_input_hook() # Clear hook
+            try:
+                readline.set_pre_input_hook() # Clear hook just in case
+            except:
+                pass
+            log_warn(f"Readline hook failed ({e}), falling back to manual edit.")
             print(f"Editing: {initial_text}")
             print("(Copy and paste the command to edit)")
             return input("Edit > ").strip()

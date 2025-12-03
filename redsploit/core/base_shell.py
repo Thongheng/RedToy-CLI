@@ -1,5 +1,6 @@
 import cmd
 import os
+import subprocess
 from .colors import Colors, log_warn, log_error
 from .session import Session
 
@@ -103,7 +104,7 @@ class BaseShell(cmd.Cmd):
 
     def do_clear(self, arg):
         """Clear the console screen"""
-        os.system("clear")
+        subprocess.run("clear", shell=True)
 
     def do_exit(self, arg):
         """Exit the console"""
@@ -113,7 +114,7 @@ class BaseShell(cmd.Cmd):
 
     def do_shell(self, arg):
         """Run a shell command"""
-        os.system(arg)
+        subprocess.run(arg, shell=True)
 
     def do_help(self, arg):
         """List available commands with descriptions."""
