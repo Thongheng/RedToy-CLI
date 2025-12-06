@@ -101,9 +101,12 @@ def main():
                 i += 3
                 continue
             else:
-                print("Usage: -set <KEY> <VALUE>")
-                print("Example: python red.py -set TARGET 10.10.10.10")
-                print("         python red.py -set USERNAME admin")
+                # Only show help if no other variable flags were used
+                # This prevents "red -set -T target" from showing help
+                if not (args.target or args.user or args.domain or args.hash):
+                    print("Usage: -set <KEY> <VALUE>")
+                    print("Example: python red.py -set TARGET 10.10.10.10")
+                    print("         python red.py -set USERNAME admin")
                 i += 1
         else:
             clean_unknown.append(arg)
