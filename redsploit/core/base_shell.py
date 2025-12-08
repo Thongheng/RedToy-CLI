@@ -5,6 +5,7 @@ import subprocess
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.shortcuts import CompleteStyle
+from prompt_toolkit.formatted_text import ANSI
 from .colors import Colors, log_warn, log_error
 from .session import Session
 
@@ -107,7 +108,7 @@ class BaseShell(cmd.Cmd):
                             # Strip ANSI codes from prompt for prompt_toolkit? 
                             # proper ANSI handling in PTK is automatic if formatted text is used, 
                             # but self.prompt currently has raw ANSI codes. PTK handles them fine usually.
-                            line = self.prompt_session.prompt(self.prompt)
+                            line = self.prompt_session.prompt(ANSI(self.prompt))
                         except EOFError:
                             line = 'EOF'
                         except KeyboardInterrupt:
