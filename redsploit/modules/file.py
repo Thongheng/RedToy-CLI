@@ -1,5 +1,6 @@
 import os
 import subprocess
+import socket
 from ..core.colors import log_info, log_success, log_error
 from ..core.base_shell import BaseShell
 from .base import ArgumentParserNoExit, BaseModule, HelpExit
@@ -8,6 +9,10 @@ from ..core.utils import get_ip_address
 class FileModule(BaseModule):
     def __init__(self, session):
         self.session = session
+
+    def is_port_in_use(self, port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex(('localhost', port)) == 0
 
     def run_download(self, filename, tool="wget", write=False, copy_only=False, edit=False, preview=False):
         if not filename:
@@ -41,6 +46,11 @@ class FileModule(BaseModule):
         else:
             log_success(f"Download Command ({tool}):")
             self._exec(cmd, copy_only=False, edit=False, run=False, preview=preview)
+            
+            # Auto-start server if not running
+            if not self.is_port_in_use(8000):
+                log_info("Autostarting HTTP server on port 8000...")
+                self.run_server("http")
 
     def run_base64(self, filename, copy_only=False, edit=False, preview=False):
         if os.path.isfile(filename):

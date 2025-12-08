@@ -1,5 +1,6 @@
 from typing import Dict, Optional
 from .colors import log_success, Colors
+from .utils import get_default_interface
 
 class Session:
     def __init__(self) -> None:
@@ -9,7 +10,7 @@ class Session:
             "USERNAME": "",
             "PASSWORD": "",
             "HASH": "",
-            "INTERFACE": "tun0",
+            "INTERFACE": get_default_interface(),
             "LPORT": "4444",
             "WORKSPACE": "default"
         }

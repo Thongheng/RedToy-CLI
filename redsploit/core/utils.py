@@ -26,4 +26,16 @@ def get_ip_address(iface):
     except Exception as e:
         log_error(f"Error getting IP (ifconfig): {e}")
     
+
     return None
+
+def get_default_interface():
+    """
+    Auto-detect the best available interface.
+    Priority: tun0, eth0, en0, wlan0
+    """
+    interfaces = ["tun0", "eth0", "en0", "wlan0"]
+    for iface in interfaces:
+        if get_ip_address(iface):
+            return iface
+    return "tun0" # Default fallback
