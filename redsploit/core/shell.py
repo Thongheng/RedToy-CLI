@@ -2,6 +2,8 @@ from .colors import Colors
 from .session import Session
 from .base_shell import BaseShell
 
+CORE_COMMANDS = {"use", "set", "show", "exit", "back", "shell", "help", "clear", "options"}
+
 class RedShell(BaseShell):
     # Intro is handled in red.py to avoid repetition
     intro = None
@@ -25,6 +27,17 @@ class RedShell(BaseShell):
         shell = InfraShell(self.session)
         shell.onecmd(arg)
 
+    def complete_infra(self, text, line, begidx, endidx):
+        """Autocomplete commands for 'infra'"""
+        from ..modules.infra import InfraShell
+        # Get commands starting with do_
+        commands = [d[3:] for d in dir(InfraShell) if d.startswith("do_")]
+        # Filter out core commands
+        commands = [c for c in commands if c not in CORE_COMMANDS]
+        if text:
+            return [c for c in commands if c.startswith(text)]
+        return commands
+
     def do_web(self, arg):
         """
         Run web commands or enter web module.
@@ -41,6 +54,16 @@ class RedShell(BaseShell):
         shell = WebShell(self.session)
         shell.onecmd(arg)
 
+    def complete_web(self, text, line, begidx, endidx):
+        """Autocomplete commands for 'web'"""
+        from ..modules.web import WebShell
+        commands = [d[3:] for d in dir(WebShell) if d.startswith("do_")]
+        # Filter out core commands
+        commands = [c for c in commands if c not in CORE_COMMANDS]
+        if text:
+            return [c for c in commands if c.startswith(text)]
+        return commands
+
     def do_file(self, arg):
         """
         Run file commands or enter file module.
@@ -56,4 +79,14 @@ class RedShell(BaseShell):
         from ..modules.file import FileShell
         shell = FileShell(self.session)
         shell.onecmd(arg)
+
+    def complete_file(self, text, line, begidx, endidx):
+        """Autocomplete commands for 'file'"""
+        from ..modules.file import FileShell
+        commands = [d[3:] for d in dir(FileShell) if d.startswith("do_")]
+        # Filter out core commands
+        commands = [c for c in commands if c not in CORE_COMMANDS]
+        if text:
+            return [c for c in commands if c.startswith(text)]
+        return commands
 

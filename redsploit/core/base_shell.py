@@ -1,15 +1,138 @@
 import cmd
 import os
 import subprocess
+# import readline # Removed in favor of prompt_toolkit
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.shortcuts import CompleteStyle
 from .colors import Colors, log_warn, log_error
 from .session import Session
+
+class CmdCompleter(Completer):
+    def __init__(self, shell):
+        self.shell = shell
+
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor
+        line = text
+        
+        # Get the full command line part
+        # We need to parse it similar to how cmd does
+        parts = line.split()
+        
+        if not parts:
+            # Completing the first word (command)
+            candidates = self.shell.completenames(text)
+            for c in candidates:
+                yield Completion(c, start_position=-len(text))
+            return
+            
+        cmd_name = parts[0]
+        
+        # If we are effectively completing the command name (e.g. "inf" -> "infra")
+        # and cursor is at end of first word
+        if len(parts) == 1 and not line.endswith(' '):
+             candidates = self.shell.completenames(cmd_name)
+             for c in candidates:
+                yield Completion(c, start_position=-len(cmd_name))
+             return
+
+        # Argument completion
+        # Check if complete_<cmd> exists
+        comp_func_name = 'complete_' + cmd_name
+        if hasattr(self.shell, comp_func_name):
+            comp_func = getattr(self.shell, comp_func_name)
+        else:
+            comp_func = self.shell.completedefault
+            
+        # Prepare arguments for complete_func(text, line, begidx, endidx)
+        # prompt_toolkit provides the full line.
+        # We need to figure out 'text' (the word being completed).
+        
+        # Simple tokenization for 'text'
+        if line.endswith(' '):
+            text_arg = ''
+            begidx = len(line)
+        else:
+            text_arg = parts[-1]
+            begidx = len(line) - len(text_arg)
+            
+        endidx = len(line)
+        
+        candidates = comp_func(text_arg, line, begidx, endidx)
+        
+        if candidates:
+            for c in candidates:
+                yield Completion(c, start_position=-len(text_arg))
 
 class BaseShell(cmd.Cmd):
     def __init__(self, session=None, module_name=None):
         super().__init__()
         self.session = session if session else Session()
         self.module_name = module_name
+        
+        # Removed readline config
+        self.prompt_session = None # Lazy init to allow prompt updates
         self.update_prompt()
+
+    def cmdloop(self, intro=None):
+        """Override cmdloop to use prompt_toolkit"""
+        self.preloop()
+        if self.use_rawinput and self.completekey:
+            try:
+                import readline
+                self.old_completer = readline.get_completer()
+                readline.set_completer(self.complete)
+                readline.parse_and_bind(self.completekey+": complete")
+            except ImportError:
+                pass
+        try:
+            if intro is not None:
+                self.intro = intro
+            if self.intro:
+                self.stdout.write(str(self.intro)+"\n")
+            stop = None
+            
+            # Setup prompt_toolkit session
+            completer = CmdCompleter(self)
+            self.prompt_session = PromptSession(completer=completer, complete_style=CompleteStyle.MULTI_COLUMN)
+            
+            while not stop:
+                if self.cmdqueue:
+                    line = self.cmdqueue.pop(0)
+                else:
+                    if self.use_rawinput:
+                        try:
+                            # Use prompt_toolkit instead of input()
+                            # Strip ANSI codes from prompt for prompt_toolkit? 
+                            # proper ANSI handling in PTK is automatic if formatted text is used, 
+                            # but self.prompt currently has raw ANSI codes. PTK handles them fine usually.
+                            line = self.prompt_session.prompt(self.prompt)
+                        except EOFError:
+                            line = 'EOF'
+                        except KeyboardInterrupt:
+                            # Clear line on Ctrl+C and continue
+                            print("^C")
+                            continue
+                    else:
+                        self.stdout.write(self.prompt)
+                        self.stdout.flush()
+                        line = self.stdin.readline()
+                        if not len(line):
+                            line = 'EOF'
+                        else:
+                            line = line.rstrip('\r\n')
+                line = self.precmd(line)
+                stop = self.onecmd(line)
+                stop = self.postcmd(stop, line)
+            self.postloop()
+        finally:
+            if self.use_rawinput and self.completekey:
+                try:
+                    import readline
+                    readline.set_completer(self.old_completer)
+                except ImportError:
+                    pass
 
     def update_prompt(self):
         target = self.session.get("TARGET")
@@ -61,6 +184,13 @@ class BaseShell(cmd.Cmd):
         else:
             log_error(f"Unknown module: {module}")
 
+    def complete_use(self, text, line, begidx, endidx):
+        """Autocomplete module names for 'use' command"""
+        modules = ["infra", "web", "file", "shell", "main"]
+        if text:
+            return [m for m in modules if m.startswith(text)]
+        return modules
+
     def do_set(self, arg):
         """Set an environment variable: SET TARGET 10.10.10.10"""
         parts = arg.split()
@@ -80,6 +210,14 @@ class BaseShell(cmd.Cmd):
                 print(f"{key}{alias_str}")
             print("")
 
+    def complete_set(self, text, line, begidx, endidx):
+        """Autocomplete variable names for 'set' command"""
+        # Combine keys and aliases
+        options = sorted(list(self.session.env.keys()) + list(self.session.ALIASES.keys()))
+        if text:
+            return [o for o in options if o.startswith(text)]
+        return options
+
     def do_show(self, arg):
         """Show options or modules: SHOW OPTIONS | SHOW MODULES"""
         arg = arg.lower()
@@ -97,6 +235,13 @@ class BaseShell(cmd.Cmd):
             print("")
         else:
             log_warn("Unknown show command. Try 'show options' or 'show modules'.")
+
+    def complete_show(self, text, line, begidx, endidx):
+        """Autocomplete options for 'show' command"""
+        options = ["options", "modules"]
+        if text:
+            return [o for o in options if o.startswith(text)]
+        return options
 
     def do_options(self, arg):
         """Show options (alias for 'show options')"""
