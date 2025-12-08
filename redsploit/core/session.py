@@ -1,5 +1,5 @@
 from typing import Dict, Optional
-from .colors import log_success, Colors
+from .colors import log_success, log_error, log_warn, Colors
 from .utils import get_default_interface
 
 class Session:
@@ -36,18 +36,19 @@ class Session:
         if key == "cred":
             if ":" in value:
                 username, password = value.split(":", 1)
+                if not username or not password:
+                    log_error("cred format requires non-empty username:password")
+                    return
                 self.env["username"] = username
                 self.env["password"] = password
                 log_success(f"username => {username}")
                 log_success(f"password => {password}")
             else:
-                from .colors import log_error
                 log_error("cred format should be username:password")
             return
             
         # Validate Key
         if key not in self.env:
-            from .colors import log_error
             log_error(f"Invalid variable: {key}")
             print("Valid variables: " + ", ".join(sorted(self.env.keys())))
             return
@@ -57,10 +58,8 @@ class Session:
             try:
                 port = int(value)
                 if not (1 <= port <= 65535):
-                    from .colors import log_warn
                     log_warn(f"Port {port} is out of valid range (1-65535). Setting anyway.")
             except ValueError:
-                from .colors import log_warn
                 log_warn(f"lport should be a number. Got: {value}. Setting anyway.")
         
         self.env[key] = value

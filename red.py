@@ -9,14 +9,6 @@ if str(project_dir) not in sys.path:
     sys.path.insert(0, str(project_dir))
 
 import argparse
-
-# Optional shell completion support
-try:
-    import argcomplete
-    ARGCOMPLETE_AVAILABLE = True
-except ImportError:
-    ARGCOMPLETE_AVAILABLE = False
-
 from redsploit.core.session import Session
 from redsploit.core.shell import RedShell
 from redsploit.core.colors import Colors, log_error
@@ -39,9 +31,6 @@ def main():
     parser.add_argument("-f", "--file", action="store_true", help="File module")
     
     # Parse only known args to find out mode
-    if ARGCOMPLETE_AVAILABLE:
-        argcomplete.autocomplete(parser)
-    
     args, unknown = parser.parse_known_args()
 
     # Handle Help Manually
@@ -104,20 +93,9 @@ def main():
         arg = unknown[i]
         if arg == "-set":
             set_command_used = True
-            if i + 2 < len(unknown):
-                key = unknown[i+1]
-                val = unknown[i+2]
-                session.set(key, val)
-                i += 3
-                continue
-            else:
-                # Only show help if no other variable flags were used
-                # This prevents "red -set -T target" from showing help
-                if not (args.target or args.user or args.domain or args.hash):
-                    print("Usage: -set <KEY> <VALUE>")
-                    print("Example: python red.py -set TARGET 10.10.10.10")
-                    print("         python red.py -set USERNAME admin")
-                i += 1
+            # Just mark that -set was used, don't consume more args here
+            # Let remaining args be processed by arg flags
+            i += 1
         else:
             clean_unknown.append(arg)
             i += 1
@@ -165,28 +143,13 @@ def main():
             if args.infra or args.web or args.file:
                 break
 
-    # Determine if we should start the shell
-    # Start shell if:
-    # 1. -i is set
-    # 2. 'set' command was used
-    # 3. No arguments provided at all (sys.argv len is 1)
-    # 4. No module flags set AND no other flags set? (Existing logic was: not infra/web/file)
-    
-    # Check if any specific action flag was provided
-    action_flags = args.infra or args.web or args.file
-    
-    # Check if any variable flags were provided
-    var_flags = args.target or args.user or args.domain or args.hash
-    
-    should_start_shell = False
-    
-    if args.interactive:
-        should_start_shell = True
-    elif set_command_used:
-        should_start_shell = True
-    elif not action_flags and not var_flags and len(unknown) == 0:
-        # No flags, no unknown args -> Pure interactive start
-        should_start_shell = True
+    # Launch interactive console if:
+    # - No arguments OR -set flag OR --interactive flag
+    should_start_shell = (
+        len(sys.argv) == 1 or
+        set_command_used or
+        args.interactive
+    )
         
     if should_start_shell:
         try:
@@ -204,7 +167,6 @@ Type 'help' or '?' to list commands.
 """)
             
             # Main Loop
-            current_shell_name = "main"
             session.next_shell = "main"
             
             while session.next_shell:
@@ -227,38 +189,26 @@ Type 'help' or '?' to list commands.
                     print(f"Unknown shell: {session.next_shell}")
                     break
                 
-                # Reset next_shell to None so we don't loop forever if cmdloop returns without setting it
-                # But BaseShell.do_use sets it.
-                # If cmdloop returns (e.g. Ctrl+D), we should probably exit or go back to main?
-                # For now, let's assume if it returns without next_shell set, we exit.
-                
-                # We need to clear next_shell before running, so if they exit, it stays None
-                # But wait, do_use sets it.
-                # Let's just run it.
-                
                 try:
                     shell.cmdloop()
                 except KeyboardInterrupt:
                     print("\n")
-                    # If Ctrl+C, maybe go back to main or just continue current?
-                    # cmdloop catches KeyboardInterrupt usually? No, it propagates.
-                    # If we catch it here, we loop back.
-                    # If we want to exit on Ctrl+C, we should break.
-                    # But users might just want to cancel a command.
-                    # Let's set next_shell to main if it was interrupted?
-                    # Or just break.
-                    session.next_shell = None # Exit
+                    session.next_shell = None  # Exit on Ctrl+C
                     
         except KeyboardInterrupt:
             print("\nExiting...")
     else:
         # CLI Mode
-        if args.infra:
-            InfraModule(session).run(unknown)
-        elif args.web:
-            WebModule(session).run(unknown)
-        elif args.file:
-            FileModule(session).run(unknown)
+        try:
+            if args.infra:
+                InfraModule(session).run(unknown)
+            elif args.web:
+                WebModule(session).run(unknown)
+            elif args.file:
+                FileModule(session).run(unknown)
+        except Exception as e:
+            log_error(f"Module execution failed: {e}")
+            sys.exit(1)
 
 if __name__ == "__main__":
     main()

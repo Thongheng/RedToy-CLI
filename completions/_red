@@ -1,0 +1,23 @@
+#compdef red
+
+_red() {
+    local -a options
+    
+    # Define completion options
+    options=(
+        '(- *)'{-h,--help}'[Show help message]'
+        '--interactive[Enter interactive mode]'
+        '-set[Preset variables and launch interactive console]'
+        '(-T --target)'{-T,--target}'[Set target IP/hostname/CIDR]:target:'
+        '(-U --user)'{-U,--user}'[Set credentials (username\:password)]:credentials:'
+        '(-D --domain)'{-D,--domain}'[Set domain name]:domain:'
+        '(-H --hash)'{-H,--hash}'[Set NTLM hash]:hash:'
+        '(-i --infra)'{-i,--infra}'[Infrastructure enumeration module]'
+        '(-w --web)'{-w,--web}'[Web reconnaissance module]'
+        '(-f --file)'{-f,--file}'[File transfer module]'
+    )
+    
+    _arguments -s -S $options
+}
+
+_red "$@"
