@@ -1,16 +1,31 @@
 # Shell Completion Installation
 
-Native shell completion for RedSploit (like nmap).
+RedSploit supports native shell completion (like nmap) for both bash and zsh.
 
-## For Zsh (Recommended for Linux)
+## Quick Setup (Recommended)
 
-### 1. Copy the completion file
+Run the automated setup script:
 
+```bash
+./setup_completion.sh
+```
+
+This will:
+- Detect your shell (bash/zsh)
+- Install completion to the appropriate location
+- Configure your shell rc file
+- Tell you how to activate
+
+## Manual Setup
+
+### For Zsh (Recommended for Linux)
+
+**System-wide:**
 ```bash
 sudo cp completions/_red /usr/share/zsh/site-functions/_red
 ```
 
-Or for user-only install:
+**User-only:**
 ```bash
 mkdir -p ~/.zsh/completion
 cp completions/_red ~/.zsh/completion/_red
@@ -20,38 +35,20 @@ fpath=(~/.zsh/completion $fpath)
 autoload -U compinit && compinit
 ```
 
-### 2. Reload shell
-
+**Reload:**
 ```bash
 source ~/.zshrc
-# Or open new terminal
 ```
 
-### 3. Test
+### For Bash
 
+**System-wide:**
 ```bash
-red -set <TAB>
-```
-
-You should see:
-```
-Completing variable
-cred        -- Credentials in username:password format
-domain      -- Domain name (default: .)
-hash        -- NTLM hash (required if password not set)
-interface   -- Network Interface
-...
-```
-
-## For Bash
-
-### 1. Install completion
-
-```bash
-# System-wide
 sudo cp completions/red.bash /etc/bash_completion.d/red
+```
 
-# Or user-only
+**User-only:**
+```bash
 mkdir -p ~/.bash_completion.d
 cp completions/red.bash ~/.bash_completion.d/red
 
@@ -59,23 +56,28 @@ cp completions/red.bash ~/.bash_completion.d/red
 for f in ~/.bash_completion.d/*; do source $f; done
 ```
 
-### 2. Reload
-
+**Reload:**
 ```bash
 source ~/.bashrc
 ```
 
-### 3. Test
+## Testing
 
 ```bash
-red -set <TAB><TAB>
+red -<TAB><TAB>
 ```
 
-Should show: `cred domain hash interface lport password target username workspace`
+### Expected Output (Zsh)
+```
+-D  -- Set domain name
+-H  -- Set NTLM hash
+-T  -- Set target IP/hostname/CIDR
+-U  -- Set credentials (username:password)
+-f  -- File transfer module
+...
+```
 
-## Verification
-
-All shells should complete:
-- `red -<TAB>` → Shows all flags
-- `red -set <TAB>` → Shows variables
-- `red --h<TAB>` → Completes to `--help`
+### Expected Output (Bash)
+```
+-D  -H  -T  -U  -f  -h  -i  -set  -w  --domain  --file  --hash  --help  --infra  --interactive  --target  --user  --web
+```
