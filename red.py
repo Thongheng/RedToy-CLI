@@ -22,7 +22,7 @@ def main():
     
     # Global flags (short only)
     parser.add_argument("-T", help="Set target")
-    parser.add_argument("-U", help="Set user (user:pass format)")
+    parser.add_argument("-U", help="Set user (username or username:password - auto-splits on ':')")
     parser.add_argument("-D", help="Set domain")
     parser.add_argument("-H", help="Set hash")
     parser.add_argument("-i", action="store_true", help="Infra module")

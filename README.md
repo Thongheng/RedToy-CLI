@@ -49,18 +49,19 @@ red -f -T 10.10.10.10 -download /etc/passwd
 
 **Command Flags:**
 
-When running commands in CLI mode, you can use these flags to modify behavior:
+When running commands, you can use these flags to modify behavior:
 
 | Flag | Description | Example |
 |------|-------------|---------|
 | `-c` / `--copy` | Copy command to clipboard without executing | `red -T 10.10.10.10 -w -dir_ferox -c` |
 | `-p` / `--preview` | Preview the command without executing | `red -T 10.10.10.10 -i -nmap -p` |
 | `-e` / `--edit` | Edit the command before execution | `red -T 10.10.10.10 -w -nuclei -e` |
+| `-auth` | Use credentials from session (interactive mode only) | `smbclient -auth` |
 
 **Set Variables:**
 ```bash
 red -T 10.10.10.10      # Set target
-red -U admin:pass       # Set user credentials
+red -U admin:pass       # Set user credentials (auto-splits to username:password)
 red -D WORKGROUP        # Set domain
 red -H <ntlm_hash>      # Set NTLM hash
 ```
@@ -78,27 +79,75 @@ red -H <ntlm_hash>      # Set NTLM hash
 | Name | Description |
 |------|-------------|
 | `target` | Target IP/hostname/CIDR |
-| `user` | User credentials (username or username:password) |
+| `user` | User credentials (auto-splits on `:` to username and password) |
+| `username` | Username (auto-set from user variable) |
+| `password` | Password (auto-set from user variable) |
 | `domain` | Domain name (default: .) |
 | `hash` | NTLM hash (alternative to password) |
 | `interface` | Network interface |
 | `lport` | Local port for reverse shells (default: 4444) |
 | `workspace` | Workspace name (default: default) |
 
+## Credential Handling
+
+RedSploit supports flexible credential management with automatic splitting and mode-based authentication:
+
+**Auto-Split Credentials:**
+```bash
+# Set username and password in one command
+red -set user admin:password123
+# Automatically creates: username=admin, password=password123
+
+# Or set username only
+red -set user admin
+```
+
+**Mode-Based Authentication:**
+
+- **CLI Mode**: Automatically uses credentials when available
+  ```bash
+  # With credentials - auto-applied
+  red -T 10.10.10.10 -U admin:pass -i -smb-c
+  
+  # Without credentials - uses NULL session
+  red -T 10.10.10.10 -i -smb-c
+  ```
+
+- **Interactive Mode**: Defaults to NULL session, use `-auth` flag to apply credentials
+  ```bash
+  red -i
+  > set user admin:password123
+  > use infra
+  
+  # NULL session (default)
+  > smbclient
+  
+  # With credentials (use -auth flag)
+  > smbclient -auth
+  ```
+
 ## Examples
 
 ```bash
 # Quick nmap scan
-red -T 10.10.10.10 -i nmap
+red -T 10.10.10.10 -i -nmap
 
 # Web directory enumeration
 red -T example.com -w -dir_ffuf
 
-# Download file via SMB
-red -T 10.10.10.10 -U admin:pass -f -smb -download /path/to/file
+# SMB enumeration with credentials (CLI auto-auth)
+red -T 10.10.10.10 -U admin:pass -i -smb-c
 
-# Interactive mode with preset variables
-red -set -T 10.10.10.10 -U admin:pass
+# SMB enumeration without credentials (NULL session)
+red -T 10.10.10.10 -i -smb-c
+
+# Interactive mode with credentials
+red -i
+> set target 10.10.10.10
+> set user admin:password
+> use infra
+> smbclient -auth  # Use credentials
+> smbmap           # NULL session (default)
 ```
 
 ## License

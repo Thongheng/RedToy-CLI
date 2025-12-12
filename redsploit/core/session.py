@@ -8,6 +8,8 @@ class Session:
             "target": "",
             "domain": "",
             "user": "",
+            "username": "",
+            "password": "",
             "hash": "",
             "interface": get_default_interface(),
             "lport": "4444",
@@ -19,6 +21,8 @@ class Session:
         self.VAR_METADATA = {
             "target": {"required": True, "desc": "Target IP/hostname/CIDR"},
             "user": {"required": True, "desc": "User credentials (username or username:password)"},
+            "username": {"required": False, "desc": "Username (auto-set from user)"},
+            "password": {"required": False, "desc": "Password (auto-set from user)"},
             "hash": {"required": False, "desc": "NTLM hash (alternative to password)"},
             "domain": {"required": False, "desc": "Domain name (default: .)"},
             "interface": {"required": True, "desc": "Network Interface"},
@@ -44,8 +48,24 @@ class Session:
             except ValueError:
                 log_warn(f"lport should be a number. Got: {value}. Setting anyway.")
         
+        # Handle auto-split for user variable
+        if key == "user":
+            if ":" in value:
+                # Split username:password
+                parts = value.split(":", 1)
+                self.env["username"] = parts[0]
+                self.env["password"] = parts[1]
+                log_success(f"username => {parts[0]}")
+                log_success(f"password => {parts[1]}")
+            else:
+                # Only username provided
+                self.env["username"] = value
+                self.env["password"] = ""
+                log_success(f"username => {value}")
+        
         self.env[key] = value
-        log_success(f"{key} => {value}")
+        if key != "user":  # Avoid duplicate log for user variable
+            log_success(f"{key} => {value}")
 
     def get(self, key: str) -> str:
         return self.env.get(key.lower(), "")

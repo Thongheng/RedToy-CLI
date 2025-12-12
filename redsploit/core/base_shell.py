@@ -145,10 +145,12 @@ class BaseShell(cmd.Cmd):
             self.prompt = f"{Colors.FAIL}{Colors.BOLD}redsploit{Colors.ENDC}{module_str} > "
 
     def parse_common_options(self, arg):
-        """Parse -c (copy) and -e (edit) flags from argument string."""
+        """Parse -c (copy), -e (edit), -p (preview), and -auth flags from argument string."""
         args = arg.split()
         copy_only = False
         edit = False
+        preview = False
+        use_auth = False
         
         if "-c" in args:
             copy_only = True
@@ -161,10 +163,12 @@ class BaseShell(cmd.Cmd):
         if "-p" in args:
             preview = True
             args.remove("-p")
-        else:
-            preview = False
             
-        return " ".join(args), copy_only, edit, preview
+        if "-auth" in args:
+            use_auth = True
+            args.remove("-auth")
+            
+        return " ".join(args), copy_only, edit, preview, use_auth
 
     def do_back(self, arg):
         """Return to the main menu"""
@@ -281,6 +285,7 @@ class BaseShell(cmd.Cmd):
         print(f"{'-c':<10} Copy command to clipboard without running")
         print(f"{'-p':<10} Preview command without running")
         print(f"{'-e':<10} Edit command before running")
+        print(f"{'-auth':<10} Use credentials from session (interactive mode)")
 
 
 
