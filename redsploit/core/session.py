@@ -1,6 +1,8 @@
 from typing import Dict, Optional
 from .colors import log_success, log_error, log_warn, Colors
 from .utils import get_default_interface
+import json
+import os
 
 class Session:
     def __init__(self) -> None:
@@ -16,6 +18,11 @@ class Session:
             "workspace": "default"
         }
         self.next_shell: Optional[str] = None
+        
+        # Ensure workspace directory exists
+        self.workspace_dir = os.path.expanduser("~/.redsploit/workspaces")
+        if not os.path.exists(self.workspace_dir):
+            os.makedirs(self.workspace_dir, exist_ok=True)
         
         # Metadata for variables
         self.VAR_METADATA = {
@@ -128,3 +135,50 @@ class Session:
         
         print_sep(bottom=True)
         print("")
+
+    def save_workspace(self, name: str) -> bool:
+        """Save current environment variables to a workspace file."""
+        try:
+            path = os.path.join(self.workspace_dir, f"{name}.json")
+            with open(path, 'w') as f:
+                json.dump(self.env, f, indent=4)
+            return True
+        except Exception as e:
+            log_error(f"Failed to save workspace '{name}': {e}")
+            return False
+
+    def load_workspace(self, name: str) -> bool:
+        """Load environment variables from a workspace file."""
+        try:
+            path = os.path.join(self.workspace_dir, f"{name}.json")
+            if not os.path.exists(path):
+                log_error(f"Workspace '{name}' not found.")
+                return False
+            
+            with open(path, 'r') as f:
+                data = json.load(f)
+                # Update env, but respect existing structure potentially? 
+                # Ideally we just overwrite or merge. Overwrite is safer for "loading state"
+                self.env.update(data)
+            return True
+        except Exception as e:
+            log_error(f"Failed to load workspace '{name}': {e}")
+            return False
+
+    def list_workspaces(self):
+        """List available workspaces."""
+        try:
+            files = [f for f in os.listdir(self.workspace_dir) if f.endswith('.json')]
+            if not files:
+                print("No workspaces found.")
+                return
+            
+            print(f"\n{Colors.HEADER}Workspaces{Colors.ENDC}")
+            print("=" * 20)
+            for f in sorted(files):
+                name = f[:-5] # Remove .json
+                current = "*" if self.env.get("workspace") == name else " "
+                print(f"[{current}] {name}")
+            print("")
+        except Exception as e:
+            log_error(f"Error listing workspaces: {e}")

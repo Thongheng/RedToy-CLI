@@ -9,6 +9,48 @@ class InfraModule(BaseModule):
     def __init__(self, session):
         super().__init__(session)
 
+    def _build_and_run(self, cmd_template: str, copy_only=False, edit=False, preview=False, require_auth=False, require_domain=False):
+        target = self._get_target()
+        if not target:
+            return
+
+        params = {"target": target}
+        
+        # Auth Check
+        user = self.session.get("username")
+        password = self.session.get("password")
+        hsh = self.session.get("hash")
+        
+        if require_auth:
+            if not (user and (password or hsh)):
+                 log_warn("This command requires credentials. Use -auth flag or set user/password/hash variables.")
+                 return
+            params["user"] = user
+            params["password"] = password
+            params["hash"] = hsh
+        
+        # Domain Check
+        if require_domain:
+            domain = self.session.get("domain")
+            if not domain:
+                log_warn("This command requires a domain. Set the 'domain' variable.")
+                return
+            params["domain"] = domain
+
+        # Construct Command
+        try:
+            # Handle special cases for optional params in templates
+            # This simple format method might need more robust logic for complex cases
+            # For now, we manually build complex strings in the wrapper methods if needed
+            # or pass pre-formatted strings
+            pass 
+        except Exception as e:
+            log_error(f"Error building command: {e}")
+            return
+
+    # Refactored Methods using _exec directly for now to keep it clean, 
+    # but standardizing the checks.
+    
     def run_nmap(self, copy_only=False, edit=False, preview=False):
         target = self._get_target()
         if target:
@@ -23,69 +65,79 @@ class InfraModule(BaseModule):
 
     def run_smbclient(self, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            user = self.session.get("username")
-            password = self.session.get("password")
-            if use_auth and user and password:
-                cmd = f"smbclient -L //{target}/ -U '{user}%{password}'"
-            else:
-                cmd = f"smbclient -L //{target}/ -N"
-            self._exec(cmd, copy_only, edit, preview=preview)
+        if not target: return
+        
+        user = self.session.get("username")
+        password = self.session.get("password")
+        
+        if use_auth and user and password:
+            cmd = f"smbclient -L //{target}/ -U '{user}%{password}'"
+        else:
+            cmd = f"smbclient -L //{target}/ -N"
+        self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_smbmap(self, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            user = self.session.get("username")
-            password = self.session.get("password")
-            if use_auth and user and password:
-                cmd = f"smbmap -H {target} -u '{user}' -p '{password}'"
-            else:
-                cmd = f"smbmap -H {target} -u null -p null"
-            self._exec(cmd, copy_only, edit, preview=preview)
+        if not target: return
+
+        user = self.session.get("username")
+        password = self.session.get("password")
+        
+        if use_auth and user and password:
+            cmd = f"smbmap -H {target} -u '{user}' -p '{password}'"
+        else:
+            cmd = f"smbmap -H {target} -u null -p null"
+        self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_enum4linux(self, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            user = self.session.get("username")
-            password = self.session.get("password")
-            auth = f"-u '{user}' -p '{password}'" if (use_auth and user and password) else ""
-            cmd = f"enum4linux-ng -A {auth} {target}"
-            self._exec(cmd, copy_only, edit, preview=preview)
+        if not target: return
+
+        user = self.session.get("username")
+        password = self.session.get("password")
+        auth = f"-u '{user}' -p '{password}'" if (use_auth and user and password) else ""
+        cmd = f"enum4linux-ng -A {auth} {target}"
+        self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_netexec(self, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            user = self.session.get("username")
-            password = self.session.get("password")
-            if use_auth and user and password:
-                cmd = f"nxc smb {target} -u '{user}' -p '{password}'"
-                self._exec(cmd, copy_only, edit, preview=preview)
-            else:
-                log_warn("NetExec requires credentials. Use -auth flag or set user variable.")
+        if not target: return
+
+        user = self.session.get("username")
+        password = self.session.get("password")
+        
+        if use_auth and user and password:
+            cmd = f"nxc smb {target} -u '{user}' -p '{password}'"
+            self._exec(cmd, copy_only, edit, preview=preview)
+        else:
+            log_warn("NetExec requires credentials. Use -auth flag or set user variable.")
 
     def run_bloodhound(self, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            user = self.session.get("username")
-            password = self.session.get("password")
-            domain = self.session.get("domain")
-            if use_auth and user and password and domain:
-                cmd = f"bloodhound-ce-python -u '{user}' -p '{password}' -ns {target} -d {domain} -c all"
-                self._exec(cmd, copy_only, edit, preview=preview)
-            else:
-                log_warn("BloodHound requires credentials and domain. Use -auth flag or set user/domain variables.")
+        if not target: return
+
+        user = self.session.get("username")
+        password = self.session.get("password")
+        domain = self.session.get("domain")
+        
+        if use_auth and user and password and domain:
+            cmd = f"bloodhound-ce-python -u '{user}' -p '{password}' -ns {target} -d {domain} -c all"
+            self._exec(cmd, copy_only, edit, preview=preview)
+        else:
+            log_warn("BloodHound requires credentials and domain. Use -auth flag or set user/domain variables.")
 
     def run_ftp(self, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            if use_auth:
-                user = self.session.get("username") or "anonymous"
-                password = self.session.get("password") or "anonymous"
-            else:
-                user = "anonymous"
-                password = "anonymous"
-            cmd = f"lftp -u '{user},{password}' ftp://{target}"
-            self._exec(cmd, copy_only, edit, preview=preview)
+        if not target: return
+        
+        if use_auth:
+            user = self.session.get("username") or "anonymous"
+            password = self.session.get("password") or "anonymous"
+        else:
+            user = "anonymous"
+            password = "anonymous"
+        cmd = f"lftp -u '{user},{password}' ftp://{target}"
+        self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_msf(self, copy_only=False, edit=False, preview=False, use_auth=True):
         lhost = get_ip_address(self.session.get("interface")) or "0.0.0.0"
@@ -97,65 +149,72 @@ class InfraModule(BaseModule):
 
     def run_rdp(self, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            user = self.session.get("username")
-            password = self.session.get("password")
-            auth = f"/u:'{user}' /p:'{password}'" if (use_auth and user and password) else ""
-            cmd = f"xfreerdp3 /v:{target} +clipboard /dynamic-resolution /drive:share,. {auth}"
-            self._exec(cmd, copy_only, edit, preview=preview)
+        if not target: return
+
+        user = self.session.get("username")
+        password = self.session.get("password")
+        auth = f"/u:'{user}' /p:'{password}'" if (use_auth and user and password) else ""
+        cmd = f"xfreerdp3 /v:{target} +clipboard /dynamic-resolution /drive:share,. {auth}"
+        self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_ssh(self, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            user = self.session.get("username")
-            password = self.session.get("password")
-            if use_auth and user and password:
-                cmd = f"sshpass -p '{password}' ssh {user}@{target}"
-                self._exec(cmd, copy_only, edit, preview=preview)
-            else:
-                log_warn("SSH requires credentials. Use -auth flag or set user variable.")
+        if not target: return
+
+        user = self.session.get("username")
+        password = self.session.get("password")
+        if use_auth and user and password:
+            cmd = f"sshpass -p '{password}' ssh {user}@{target}"
+            self._exec(cmd, copy_only, edit, preview=preview)
+        else:
+            log_warn("SSH requires credentials. Use -auth flag or set user variable.")
 
     def run_evil_winrm(self, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            user = self.session.get("username")
-            password = self.session.get("password")
-            hsh = self.session.get("hash")
-            auth = ""
-            if use_auth:
-                if user: auth += f"-u '{user}' "
-                if password: auth += f"-p '{password}' "
-                if hsh: auth += f"-H '{hsh}' "
-            cmd = f"evil-winrm-py -i {target} {auth}"
-            self._exec(cmd, copy_only, edit, preview=preview)
+        if not target: return
+
+        user = self.session.get("username")
+        password = self.session.get("password")
+        hsh = self.session.get("hash")
+        
+        auth = ""
+        if use_auth:
+            if user: auth += f"-u '{user}' "
+            if password: auth += f"-p '{password}' "
+            if hsh: auth += f"-H '{hsh}' "
+        
+        cmd = f"evil-winrm-py -i {target} {auth}"
+        self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_impacket(self, tool, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            user = self.session.get("username")
-            password = self.session.get("password")
-            hsh = self.session.get("hash")
-            
-            creds = ""
-            if use_auth and user:
-                creds = user
-                if password: creds += f":{password}"
-            
-            if use_auth and hsh and user: creds = user 
-            
-            cmd = f"impacket-{tool} {creds}@{target}"
-            if use_auth and hsh: cmd += f" -hashes {hsh}"
-            self._exec(cmd, copy_only, edit, preview=preview)
+        if not target: return
+
+        user = self.session.get("username")
+        password = self.session.get("password")
+        hsh = self.session.get("hash")
+        
+        creds = ""
+        if use_auth and user:
+            creds = user
+            if password: creds += f":{password}"
+        
+        if use_auth and hsh and user: creds = user 
+        
+        cmd = f"impacket-{tool} {creds}@{target}"
+        if use_auth and hsh: cmd += f" -hashes {hsh}"
+        self._exec(cmd, copy_only, edit, preview=preview)
 
     def run_kerbrute(self, copy_only=False, edit=False, preview=False, use_auth=True):
         target = self._get_target()
-        if target:
-            domain = self.session.get("domain")
-            if domain:
-                cmd = f"kerbrute userenum --dc {target} -d {domain} users.txt"
-                self._exec(cmd, copy_only, edit, preview=preview)
-            else:
-                log_warn("Kerbrute requires domain. Set domain variable.")
+        if not target: return
+
+        domain = self.session.get("domain")
+        if domain:
+            cmd = f"kerbrute userenum --dc {target} -d {domain} users.txt"
+            self._exec(cmd, copy_only, edit, preview=preview)
+        else:
+            log_warn("Kerbrute requires domain. Set domain variable.")
 
 
 

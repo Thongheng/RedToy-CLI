@@ -25,6 +25,8 @@ def main():
     parser.add_argument("-U", help="Set user (username or username:password - auto-splits on ':')")
     parser.add_argument("-D", help="Set domain")
     parser.add_argument("-H", help="Set hash")
+    parser.add_argument("-I", help="Set interface")
+    parser.add_argument("-P", help="Set LPORT")
     parser.add_argument("-i", action="store_true", help="Infra module")
     parser.add_argument("-w", action="store_true", help="Web module")
     parser.add_argument("-f", action="store_true", help="File module")
@@ -79,6 +81,12 @@ def main():
 
     if args.H:
         session.set("hash", args.H)
+
+    if args.I:
+        session.set("interface", args.I)
+
+    if args.P:
+        session.set("lport", args.P)
 
     # Handle '-set' command in unknown args (e.g. python red.py -set TARGET 1.1.1.1)
     i = 0

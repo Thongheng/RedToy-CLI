@@ -6,7 +6,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.shortcuts import CompleteStyle
 from prompt_toolkit.formatted_text import ANSI
-from .colors import Colors, log_warn, log_error
+from .colors import Colors, log_warn, log_error, log_success
 from .session import Session
 
 class CmdCompleter(Completer):
@@ -259,6 +259,65 @@ class BaseShell(cmd.Cmd):
         """Show options (alias for 'show options')"""
         self.session.show_options()
 
+    def do_workspace(self, arg):
+        """
+        Manage workspaces.
+        Usage: 
+            workspace save <name>
+            workspace load <name>
+            workspace list
+        """
+        parts = arg.split()
+        if not parts:
+            log_error("Usage: workspace <save|load|list> [name]")
+            return
+
+        cmd = parts[0].lower()
+        
+        if cmd == "list":
+            self.session.list_workspaces()
+        
+        elif cmd == "save":
+            if len(parts) < 2:
+                log_error("Usage: workspace save <name>")
+                return
+            name = parts[1]
+            if self.session.save_workspace(name):
+                log_success(f"Workspace '{name}' saved.")
+                self.session.set("workspace", name)
+        
+        elif cmd == "load":
+            if len(parts) < 2:
+                log_error("Usage: workspace load <name>")
+                return
+            name = parts[1]
+            if self.session.load_workspace(name):
+                log_success(f"Workspace '{name}' loaded.")
+                self.session.set("workspace", name)
+                self.update_prompt()
+        else:
+            log_error(f"Unknown workspace command: {cmd}")
+
+    def complete_workspace(self, text, line, begidx, endidx):
+        """Autocomplete for workspace command"""
+        parts = line.split()
+        # if typing the subcommand (save, load, list)
+        if len(parts) == 1 or (len(parts) == 2 and not line.endswith(' ')):
+             cmds = ["save", "load", "list"]
+             return [c for c in cmds if c.startswith(text)]
+        
+        # if typing the name for load
+        if len(parts) >= 2 and parts[1] == "load":
+            # List available files
+            import os
+            ws_dir = self.session.workspace_dir
+            if os.path.exists(ws_dir):
+                files = [f[:-5] for f in os.listdir(ws_dir) if f.endswith(".json")]
+                prefix = parts[2] if len(parts) > 2 else ""
+                return [f for f in files if f.startswith(prefix)]
+        
+        return []
+
     def do_clear(self, arg):
         """Clear the console screen"""
         subprocess.run("clear", shell=True)
@@ -291,7 +350,7 @@ class BaseShell(cmd.Cmd):
 
         
         # Core commands defined in BaseShell
-        core_cmds = ["use", "set", "show", "exit", "back", "shell", "help", "clear"]
+        core_cmds = ["use", "set", "show", "exit", "back", "shell", "help", "clear", "workspace"]
         module_cmds = []
         
         # Introspect to find commands
