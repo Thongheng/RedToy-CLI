@@ -118,6 +118,7 @@ class Session:
 
         # Print Rows
         for key, value in self.env.items():
+            if key == "user": continue  # Hide user, show username/password instead
             meta = self.VAR_METADATA.get(key, {"required": False, "desc": "Custom Variable"})
             
             # Truncate value if too long

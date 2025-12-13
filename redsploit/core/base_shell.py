@@ -212,9 +212,7 @@ class BaseShell(cmd.Cmd):
             print("=" * 60)
             print(f"{'Name':<20} {'Description'}")
             print("-" * 60)
-            # Add cred first
-            cred_meta = self.session.VAR_METADATA.get("cred", {})
-            print(f"{'cred':<20} {cred_meta.get('desc', '')}")
+
             # Then show regular variables
             for key in sorted(self.session.env.keys()):
                 meta = self.session.VAR_METADATA.get(key, {})
@@ -225,7 +223,7 @@ class BaseShell(cmd.Cmd):
     def complete_set(self, text, line, begidx, endidx):
         """Autocomplete variable names for 'set' command"""
         # Full names only, case-insensitive suggestion
-        options = sorted(list(self.session.env.keys()) + ["cred"])
+        options = sorted(list(self.session.env.keys()))
         if text:
             return [o for o in options if o.startswith(text.lower())]
         return options
