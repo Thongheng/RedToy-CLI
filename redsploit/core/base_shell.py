@@ -5,6 +5,7 @@ import subprocess
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.shortcuts import CompleteStyle
+from prompt_toolkit.history import FileHistory
 from prompt_toolkit.formatted_text import ANSI
 from .colors import Colors, log_warn, log_error, log_success
 from .session import Session
@@ -76,6 +77,10 @@ class BaseShell(cmd.Cmd):
         self.prompt_session = None # Lazy init to allow prompt updates
         self.update_prompt()
 
+    def get_names(self):
+        """Override to include instance attributes (dynamic commands)."""
+        return dir(self)
+
     def cmdloop(self, intro=None):
         """Override cmdloop to use prompt_toolkit"""
         self.preloop()
@@ -96,7 +101,19 @@ class BaseShell(cmd.Cmd):
             
             # Setup prompt_toolkit session
             completer = CmdCompleter(self)
-            self.prompt_session = PromptSession(completer=completer, complete_style=CompleteStyle.MULTI_COLUMN)
+            
+            # History Persistence
+            try:
+                history_path = os.path.expanduser("~/.redsploit_history")
+                history = FileHistory(history_path)
+            except Exception:
+                history = None
+
+            self.prompt_session = PromptSession(
+                completer=completer, 
+                complete_style=CompleteStyle.MULTI_COLUMN,
+                history=history
+            )
             
             while not stop:
                 if self.cmdqueue:

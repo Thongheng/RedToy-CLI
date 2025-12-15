@@ -2,7 +2,7 @@ from .colors import Colors
 from .session import Session
 from .base_shell import BaseShell
 
-CORE_COMMANDS = {"use", "set", "show", "exit", "back", "shell", "help", "clear", "options"}
+CORE_COMMANDS = {"use", "set", "show", "exit", "back", "shell", "help", "clear", "options", "workspace"}
 
 class RedShell(BaseShell):
     # Intro is handled in red.py to avoid repetition
@@ -29,9 +29,13 @@ class RedShell(BaseShell):
 
     def complete_infra(self, text, line, begidx, endidx):
         """Autocomplete commands for 'infra'"""
-        from ..modules.infra import InfraShell
-        # Get commands starting with do_
+        from ..modules.infra import InfraShell, InfraModule
+        
+        # Static commands
         commands = [d[3:] for d in dir(InfraShell) if d.startswith("do_")]
+        # Dynamic commands
+        commands.extend(list(InfraModule.TOOLS.keys()))
+        
         # Filter out core commands
         commands = [c for c in commands if c not in CORE_COMMANDS]
         if text:
@@ -56,8 +60,13 @@ class RedShell(BaseShell):
 
     def complete_web(self, text, line, begidx, endidx):
         """Autocomplete commands for 'web'"""
-        from ..modules.web import WebShell
+        from ..modules.web import WebShell, WebModule
+        
+        # Static commands
         commands = [d[3:] for d in dir(WebShell) if d.startswith("do_")]
+        # Dynamic commands
+        commands.extend(list(WebModule.TOOLS.keys()))
+
         # Filter out core commands
         commands = [c for c in commands if c not in CORE_COMMANDS]
         if text:
@@ -82,8 +91,13 @@ class RedShell(BaseShell):
 
     def complete_file(self, text, line, begidx, endidx):
         """Autocomplete commands for 'file'"""
-        from ..modules.file import FileShell
+        from ..modules.file import FileShell, FileModule
+        
+        # Static commands
         commands = [d[3:] for d in dir(FileShell) if d.startswith("do_")]
+        # Dynamic commands
+        commands.extend(list(FileModule.TOOLS.keys()))
+        
         # Filter out core commands
         commands = [c for c in commands if c not in CORE_COMMANDS]
         if text:

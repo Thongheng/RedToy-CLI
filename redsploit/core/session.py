@@ -3,6 +3,7 @@ from .colors import log_success, log_error, log_warn, Colors
 from .utils import get_default_interface
 import json
 import os
+import yaml
 
 class Session:
     def __init__(self) -> None:
@@ -12,7 +13,6 @@ class Session:
             "user": "",
             "username": "",
             "password": "",
-            "hash": "",
             "interface": get_default_interface(),
             "lport": "4444",
             "workspace": "default"
@@ -23,6 +23,12 @@ class Session:
         self.workspace_dir = os.path.expanduser("~/.redsploit/workspaces")
         if not os.path.exists(self.workspace_dir):
             os.makedirs(self.workspace_dir, exist_ok=True)
+
+        # Config Loading
+        # Determine project root (redsploit/core/session.py -> ../../)
+        self.project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        self.config_path = os.path.join(self.project_root, "config.yaml")
+        self.config = self.load_config()
         
         # Metadata for variables
         self.VAR_METADATA = {
@@ -30,12 +36,82 @@ class Session:
             "user": {"required": True, "desc": "User credentials (username or username:password)"},
             "username": {"required": False, "desc": "Username (auto-set from user)"},
             "password": {"required": False, "desc": "Password (auto-set from user)"},
-            "hash": {"required": False, "desc": "NTLM hash (alternative to password)"},
             "domain": {"required": False, "desc": "Domain name (default: .)"},
             "interface": {"required": True, "desc": "Network Interface"},
             "lport": {"required": True, "desc": "Local Port (Reverse Shell)"},
             "workspace": {"required": True, "desc": "Workspace name"},
         }
+
+    def load_config(self):
+        default_config = {
+            "web": {
+                "wordlists": {
+                    "directory": "/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt",
+                    "subdomain": "/usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt",
+                    "vhost": "/usr/share/seclists/Discovery/DNS/subdomains-top1million-20000.txt"
+                }
+            }
+        }
+        
+        if os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, 'r') as f:
+                    return yaml.safe_load(f) or default_config
+            except Exception as e:
+                log_error(f"Failed to load config: {e}")
+                return default_config
+        else:
+            try:
+                with open(self.config_path, 'w') as f:
+                    yaml.dump(default_config, f, default_flow_style=False)
+                # log_success(f"Created default config at {self.config_path}") # Optional to reduce noise
+                return default_config
+            except Exception as e:
+                log_error(f"Failed to create config: {e}")
+                return default_config
+
+    def resolve_target(self):
+        """
+        Unified target resolution.
+        Returns: (domain_or_ip, url, port)
+        Priority: DOMAIN > TARGET
+        """
+        domain_var = self.get("domain")
+        target_var = self.get("target")
+        
+        # Prefer DOMAIN, fallback to TARGET
+        target = domain_var if domain_var else target_var
+        
+        if not target:
+            return None, None, None
+            
+        # Parse target logic
+        domain = target
+        protocol = "http"
+        
+        if "://" in domain:
+            protocol, domain = domain.split("://", 1)
+            
+        # Extract port
+        port = ""
+        if ":" in domain:
+            parts = domain.split(":")
+            if parts[-1].isdigit():
+                port = parts[-1]
+                domain = ":".join(parts[:-1])
+        
+        # Remove trailing slash
+        domain = domain.rstrip("/")
+        
+        # Reconstruct URL
+        url = f"{protocol}://{domain}"
+        if port:
+            url += f":{port}"
+            
+        return domain, url, port
+
+    def get(self, key: str) -> str:
+        return self.env.get(key.lower(), "")
 
     def set(self, key: str, value: str) -> None:
         key = key.lower()

@@ -2,12 +2,24 @@ import os
 import subprocess
 import socket
 import glob
-from ..core.colors import log_info, log_success, log_error
+from ..core.colors import log_info, log_success, log_error, Colors
 from ..core.base_shell import BaseShell
 from .base import ArgumentParserNoExit, BaseModule, HelpExit
 from ..core.utils import get_ip_address
 
 class FileModule(BaseModule):
+    # Templates for utilities
+    TOOLS = {
+        "wget": "wget http://{ip}:8000/{filename}",
+        "wget_write": "wget http://{ip}:8000/{filename} -O {filename}",
+        "curl": "curl http://{ip}:8000/{filename} -O",
+        "curl_write": "curl http://{ip}:8000/{filename} -o {filename}",
+        "iwr": "iwr http://{ip}:8000/{filename} -OutFile {filename}",
+        "certutil": "certutil -urlcache -split -f http://{ip}:8000/{filename} {filename}",
+        "scp": "scp user@{ip}:$(pwd)/{filename} .",
+        "base64": "base64 {filename}"
+    }
+
     def __init__(self, session):
         self.session = session
 
@@ -27,20 +39,17 @@ class FileModule(BaseModule):
             log_error(f"Could not find IP for interface {interface}")
             return
 
-        cmd = ""
-        if tool == "wget":
-            cmd = f"wget http://{ip_addr}:8000/{filename}"
-            if write: cmd += f" -O {filename}"
-        elif tool == "curl":
-            cmd = f"curl http://{ip_addr}:8000/{filename}"
-            if write: cmd += f" -o {filename}"
-            else: cmd += " -O"
-        elif tool == "iwr":
-            cmd = f"iwr http://{ip_addr}:8000/{filename} -OutFile {filename}"
-        elif tool == "certutil":
-            cmd = f"certutil -urlcache -split -f http://{ip_addr}:8000/{filename} {filename}"
-        elif tool == "scp":
-            cmd = f"scp user@{ip_addr}:$(pwd)/{filename} ."
+        # Determine Tool Key
+        tool_key = tool
+        if write and tool in ["wget", "curl"]:
+            tool_key += "_write"
+        
+        cmd_template = self.TOOLS.get(tool_key)
+        if not cmd_template:
+            log_error(f"Unknown tool: {tool}")
+            return
+
+        cmd = cmd_template.format(ip=ip_addr, filename=filename)
         
         if copy_only or edit or preview:
             self._exec(cmd, copy_only, edit, run=False, preview=preview)
@@ -56,7 +65,7 @@ class FileModule(BaseModule):
     def run_base64(self, filename, copy_only=False, edit=False, preview=False):
         if os.path.isfile(filename):
             log_success(f"Base64 encoded content of {filename}:")
-            cmd = f"base64 {filename}"
+            cmd = self.TOOLS["base64"].format(filename=filename)
             self._exec(cmd, copy_only, edit, preview=preview)
         else:
             log_error(f"File {filename} not found locally.")
@@ -80,7 +89,7 @@ class FileModule(BaseModule):
         if preview:
             print(f"{Colors.OKCYAN}{' '.join(cmd)}{Colors.ENDC}")
             return
-
+            
         log_info(msg)
         try:
             subprocess.run(cmd)
@@ -88,46 +97,7 @@ class FileModule(BaseModule):
             print("\nServer stopped.")
 
     def run(self, args_list):
-        parser = ArgumentParserNoExit(prog="file", description="File Transfer & Server Tools", usage="file [options] [filename]")
-        parser.add_argument("filename", nargs="?", help="File to serve/download")
-        parser.add_argument("-w", "--write", action="store_true", help="Add output flag (-O/-o)")
-        parser.add_argument("-t", "--tool", default="wget", choices=["wget", "curl", "iwr", "certutil", "scp", "base64"], help="Transfer tool")
-        parser.add_argument("-s", "--server", choices=["http", "smb"], help="Server type (http/smb)")
-        parser.add_argument("-b64", action="store_true", help="Base64 encode file (alias for -t base64)")
-        parser.add_argument("-c", "--copy", action="store_true", help="Copy command only")
-        parser.add_argument("-p", "--preview", action="store_true", help="Preview command without executing")
-        parser.add_argument("-e", "--edit", action="store_true", help="Edit command before execution")
-        
-        try:
-            args = parser.parse_args(args_list)
-        except ValueError as e:
-            log_error(str(e))
-            return
-        except HelpExit:
-            return
-
-        if args.b64: args.tool = "base64"
-
-        executed = False
-        copy_only = getattr(args, 'copy', False)
-        preview = getattr(args, 'preview', False)
-        edit = getattr(args, 'edit', False)
-        if args.tool == "base64":
-            if args.filename: self.run_base64(args.filename, copy_only=copy_only, edit=edit, preview=preview); executed = True
-            else: log_error("Filename required for base64")
-            return
-
-        # If filename provided, assume download gen
-        if args.filename:
-            self.run_download(args.filename, args.tool, args.write, copy_only=copy_only, edit=edit, preview=preview)
-            executed = True
-        elif args.server:
-            # Else assume server start if -s provided
-            self.run_server(args.server, preview=preview)
-            executed = True
-            
-        if not executed:
-            parser.print_help()
+        log_warn("CLI mode is being refactored. Please use interactive mode.")
 
 
 class FileShell(BaseShell):
@@ -148,16 +118,16 @@ class FileShell(BaseShell):
         if not parts:
             log_error("Usage: download <filename> [tool]")
             return
+        filename = parts[0]
         tool = parts[1] if len(parts) > 1 else "wget"
+        # Optional write flag handling could be better in generic parsing, but keeping simple here
         self.file_module.run_download(filename, tool, write=False, copy_only=copy_only, edit=edit, preview=preview)
 
     def complete_download(self, text, line, begidx, endidx):
         """Autocomplete for download command"""
         args = line.split()
-        # If completing filename (first arg)
         if len(args) < 2 or (len(args) == 2 and not line.endswith(' ')):
             return [f for f in glob.glob(text + '*') if os.path.isfile(f)]
-        # If completing tool (second arg)
         elif len(args) < 3 or (len(args) == 3 and not line.endswith(' ')):
             tools = ["wget", "curl", "iwr", "certutil", "scp"]
             return [t for t in tools if t.startswith(text)]
