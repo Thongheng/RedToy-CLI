@@ -301,6 +301,8 @@ class BaseShell(cmd.Cmd):
             if self.session.save_workspace(name):
                 log_success(f"Workspace '{name}' saved.")
                 self.session.set("workspace", name)
+                # Switch loot context
+                self.session.loot.set_workspace(name)
         
         elif cmd == "load":
             if len(parts) < 2:
@@ -313,6 +315,145 @@ class BaseShell(cmd.Cmd):
                 self.update_prompt()
         else:
             log_error(f"Unknown workspace command: {cmd}")
+
+    def do_loot(self, arg):
+        """
+        Manage captured loot (credentials, hashes).
+        Usage:
+            loot add <content> [service] [type]
+            loot show
+            loot use <id>
+            loot rm <id>
+            loot clear
+        
+        Examples:
+            loot add admin:pass123 smb cred
+            loot use 1  # Loads admin:pass123 into session user/pass
+        """
+        parts = arg.split()
+        if not parts:
+            # Default to show
+            self.session.loot.list_loot()
+            return
+            
+        cmd = parts[0].lower()
+        
+        if cmd == "show" or cmd == "list":
+            self.session.loot.list_loot()
+            
+        elif cmd == "add":
+            if len(parts) < 2:
+                log_error("Usage: loot add <content> [service] [type]")
+                return
+            
+            content = parts[1]
+            service = parts[2] if len(parts) > 2 else ""
+            loot_type = parts[3] if len(parts) > 3 else "cred"
+            target = self.session.get("target")
+            
+            self.session.loot.add(content, loot_type, service, target)
+
+        elif cmd == "use" or cmd == "load":
+            if len(parts) < 2:
+                log_error("Usage: loot use <id>")
+                return
+            try:
+                loot_id = int(parts[1])
+                # Find the entry
+                entry = next((item for item in self.session.loot.loot_data if item["id"] == loot_id), None)
+                if not entry:
+                    log_error("Invalid Loot ID")
+                    return
+                
+                # Logic to determine what to set
+                content = entry.get("content", "")
+                l_type = entry.get("type", "cred")
+                
+                if l_type == "hash" or l_type == "ntlm":
+                    self.session.set("hash", content)
+                else:
+                    # Default to setting user (which auto-splits username/pass)
+                    self.session.set("user", content)
+                    
+                log_success(f"Loaded loot #{loot_id} into session variables.")
+                
+            except ValueError:
+                log_error("Invalid Loot ID format")
+            
+        elif cmd == "rm" or cmd == "del":
+            if len(parts) < 2:
+                log_error("Usage: loot rm <id>")
+                return
+            try:
+                loot_id = int(parts[1])
+                self.session.loot.remove(loot_id)
+            except ValueError:
+                log_error("Invalid Loot ID")
+        
+        elif cmd == "clear":
+            self.session.loot.clear()
+            
+        else:
+            log_error(f"Unknown loot command: {cmd}")
+
+    def do_playbook(self, arg):
+        """
+        Run interactive playbooks.
+        Usage:
+            playbook list
+            playbook run <name>
+        """
+        parts = arg.split()
+        if not parts:
+            self.session.playbook.list_playbooks()
+            return
+            
+        cmd = parts[0].lower()
+        
+        if cmd == "list":
+            self.session.playbook.list_playbooks()
+        elif cmd == "run":
+            if len(parts) < 2:
+                log_error("Usage: playbook run <name>")
+                return
+            name = parts[1]
+            self.session.playbook.run_playbook(name)
+        else:
+            log_error(f"Unknown playbook command: {cmd}")
+
+    def complete_playbook(self, text, line, begidx, endidx):
+        """Autocomplete for playbook command"""
+        parts = line.split()
+        if len(parts) == 1 or (len(parts) == 2 and not line.endswith(' ')):
+             cmds = ["list", "run"]
+             return [c for c in cmds if c.startswith(text)]
+        
+        if len(parts) >= 2 and parts[1] == "run":
+             # Autocomplete playbook names
+             pb_dir = self.session.playbook.playbooks_dir
+             if os.path.exists(pb_dir):
+                 files = [f for f in os.listdir(pb_dir) if f.endswith('.yaml')]
+                 return [f for f in files if f.startswith(text)]
+        return []
+
+    def complete_loot(self, text, line, begidx, endidx):
+        """Autocomplete for loot command"""
+        parts = line.split()
+        
+        # Subcommand completion
+        if len(parts) == 1 or (len(parts) == 2 and not line.endswith(' ')):
+             cmds = ["add", "show", "list", "rm", "clear", "use"]
+             return [c for c in cmds if c.startswith(text)]
+        
+        # ID completion for 'use', 'rm', 'del'
+        if len(parts) >= 2:
+            cmd = parts[1]
+            if cmd in ["use", "rm", "del", "load"]:
+                # Suggest IDs
+                ids = [str(x['id']) for x in self.session.loot.loot_data]
+                return [i for i in ids if i.startswith(text)]
+            
+        return []
 
     def complete_workspace(self, text, line, begidx, endidx):
         """Autocomplete for workspace command"""
@@ -366,7 +507,7 @@ class BaseShell(cmd.Cmd):
 
         
         # Core commands defined in BaseShell
-        core_cmds = ["use", "set", "show", "exit", "back", "shell", "help", "clear", "workspace"]
+        core_cmds = ["use", "set", "show", "exit", "back", "shell", "help", "clear", "workspace", "loot", "playbook"]
         module_cmds = []
         
         # Introspect to find commands

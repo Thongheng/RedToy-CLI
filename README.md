@@ -145,18 +145,61 @@ red -set user admin
   red -T 10.10.10.10 -i -smb-c
   ```
 
-- **Interactive Mode**: Defaults to NULL session, use `-auth` flag to apply credentials
-  ```bash
-  red -i
-  > set user admin:password123
-  > use infra
-  
-  # NULL session (default)
-  > smbclient
-  
   # With credentials (use -auth flag)
   > smbclient -auth
   ```
+
+## Loot Locker (Credential Management)
+
+RedSploit includes a built-in **Loot Locker** to manage credentials found during engagements. It allows you to store, organize, and active credentials on the fly.
+
+**Commands:**
+
+- `loot add <content> [service] [type]`: Add new loot
+- `loot show`: List captured loot
+- `loot use <id>`: **Load loot into session variables** (sets user/password/hash)
+- `loot rm <id>`: Remove loot
+
+**Usage Example:**
+
+```bash
+# 1. Capture a credential
+> loot add admin:Secret123 smb cred
+[+] Added loot: admin:Secret123 (cred)
+
+# 2. List available loot
+> loot show
+ID   Type       Target          Service    Content                                  
+----------------------------------------------
+1    cred                       smb        admin:Secret123                        
+
+# 3. Use the credential (Populates session variables)
+> loot use 1
+[+] Loaded loot #1 into session variables.
+
+# 4. Run tools with the loaded credential
+> smbclient -auth
+```
+
+> **Note**: The `service` and `target` fields in `loot add` are optional metadata to help you organize your loot. They do not restrict usage.
+
+## Interactive Playbooks
+
+Playbooks allow you to run semi-automated workflows defined in YAML files. This ensures consistency while keeping the operator in control (Human-in-the-loop).
+
+**Commands:**
+
+- `playbook list`: Show available playbooks
+- `playbook run <name>`: Execute a playbook
+
+**Example Workflow:**
+
+```bash
+> set target 10.10.10.10
+> playbook run recon
+```
+
+Playbooks are stored in the `playbooks/` directory. You can create your own YAML files to define custom workflows.
 
 ## Examples
 

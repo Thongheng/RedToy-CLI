@@ -1,6 +1,8 @@
 from typing import Dict, Optional
 from .colors import log_success, log_error, log_warn, Colors
 from .utils import get_default_interface
+from .loot import LootManager
+from .playbook import PlaybookManager
 import json
 import os
 import yaml
@@ -41,6 +43,12 @@ class Session:
             "lport": {"required": True, "desc": "Local Port (Reverse Shell)"},
             "workspace": {"required": True, "desc": "Workspace name"},
         }
+        
+        # Initialize Loot Manager
+        self.loot = LootManager(self.workspace_dir, self.env["workspace"])
+        
+        # Initialize Playbook Manager
+        self.playbook = PlaybookManager(self)
 
     def load_config(self):
         default_config = {
@@ -147,11 +155,13 @@ class Session:
                 log_success(f"username => {value}")
         
         self.env[key] = value
+        
+        # If the workspace is being set, update the LootManager's context
+        if key == "workspace":
+            self.loot.set_workspace(value)
+
         if key != "user":  # Avoid duplicate log for user variable
             log_success(f"{key} => {value}")
-
-    def get(self, key: str) -> str:
-        return self.env.get(key.lower(), "")
 
     def show_options(self):
         # Metadata moved to self.VAR_METADATA
@@ -237,6 +247,9 @@ class Session:
                 # Update env, but respect existing structure potentially? 
                 # Ideally we just overwrite or merge. Overwrite is safer for "loading state"
                 self.env.update(data)
+                
+                # Reload loot for the new workspace
+                self.loot.set_workspace(name)
             return True
         except Exception as e:
             log_error(f"Failed to load workspace '{name}': {e}")
