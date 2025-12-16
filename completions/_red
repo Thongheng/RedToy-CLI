@@ -3,11 +3,15 @@
 _red() {
     local curcontext="$curcontext" state line ret=1
     typeset -A opt_args
+    local cur="${words[CURRENT]}"
     
-    # If current word doesn't start with -, complete files
-    if [[ ${words[CURRENT]} != -* ]] && (( CURRENT > 1 )); then
-        _files
-        return
+    # If current word is empty or doesn't start with -, complete files
+    if [[ -z "$cur" ]] || [[ "$cur" != -* ]]; then
+        # But only if we're past the first argument
+        if (( CURRENT > 1 )); then
+            _files
+            return 0
+        fi
     fi
     
     _arguments -C -s -S \
