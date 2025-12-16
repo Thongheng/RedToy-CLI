@@ -121,7 +121,30 @@ class FileModule(BaseModule):
         elif "-smb" in args_list:
             self.run_server("smb")
         else:
-             log_warn("No valid tool flag found. Use interactive mode.")
+            # Heuristic Parsing for implicit commands
+            # red -f tun0 linpeas.sh -> download linpeas.sh using tun0
+            # red -f linpeas.sh -> download linpeas.sh using default interface
+            
+            non_flag_args = [arg for arg in args_list if not arg.startswith("-")]
+            
+            if not non_flag_args:
+                log_warn("No valid tool flag found. Use interactive mode.")
+                return
+
+            # Check if first arg is an interface
+            potential_iface = non_flag_args[0]
+            if get_ip_address(potential_iface):
+                self.session.set("INTERFACE", potential_iface)
+                non_flag_args.pop(0)
+            
+            if not non_flag_args:
+                 log_warn("Interface set, but no filename provided.")
+                 return
+
+            filename = non_flag_args[0]
+            tool = non_flag_args[1] if len(non_flag_args) > 1 else "wget"
+            
+            self.run_download(filename, tool)
 
 
 class FileShell(BaseShell):
